@@ -9,7 +9,7 @@
 
 - [x] 使用 uv 初始化專案並安裝依賴
 - [x] 實作錄音控制模組
-- [ ] 實作 Whisper 語音辨識模組
+- [x] 實作 Whisper 語音辨識模組
 - [ ] 實作 LLM 文字後處理模組
 - [ ] 整合主程式與終端機互動迴圈
 - [ ] 執行驗收測試
@@ -83,7 +83,7 @@
 - 確認辨識結果為中文文字（非亂碼或空白）
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+[技術障礙] transformers v5 中 `torch_dtype` 參數已 deprecated，需改用 `dtype`。另外 `initial_prompt` 不能直接傳入 `generate_kwargs`，需透過 `processor.get_prompt_ids()` 編碼為 `prompt_ids`，且必須 `.to(device)` 搬到 CUDA 上。
 
 ---
 
