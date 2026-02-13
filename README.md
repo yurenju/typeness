@@ -1,9 +1,10 @@
 # Typeness
 
-Local voice input tool that converts speech to structured written text using Whisper and Qwen3.
+Local voice input tool that converts speech to structured written text using Whisper and Qwen3. Works as a global voice input method — press a hotkey in any application, speak, and the processed text is automatically pasted at the cursor position.
 
 ## Prerequisites
 
+- Windows 11
 - NVIDIA GPU with CUDA support (tested on RTX 5090 Laptop, Blackwell architecture)
 - CUDA drivers installed
 - Python 3.12
@@ -22,6 +23,8 @@ uv sync
 
 PyTorch with CUDA 13.0 support is automatically resolved via `[tool.uv.sources]` in `pyproject.toml`.
 
+Dependencies include `pynput` (global hotkey listener) and `pyperclip` (clipboard operations).
+
 ## Usage
 
 ```bash
@@ -32,18 +35,26 @@ On first run, Whisper (`openai/whisper-large-v3-turbo`) and Qwen3 (`Qwen/Qwen3-1
 
 ### How it works
 
-1. Press **Enter** to start recording
-2. Speak into your microphone (in Traditional Chinese)
-3. Press **Enter** again to stop recording
-4. The tool displays:
+1. Launch the program — it runs in the terminal foreground
+2. Press **Shift+Win+A** to start recording (works in any application)
+3. Speak into your microphone (in Traditional Chinese)
+4. Press **Shift+Win+A** again to stop recording
+5. The processed text is automatically pasted into the focused window
+6. The terminal displays:
    - **Whisper raw**: original speech-to-text result
    - **LLM processed**: cleaned and formatted text (filler words removed, punctuation added, lists formatted)
    - **Timing stats**: recording duration, Whisper latency, LLM latency, total latency
-5. Press **Ctrl+C** to exit
+7. Press **Ctrl+C** to exit (global keyboard hook is cleaned up)
 
 ## Architecture
 
-Single-file MVP (`typeness.py`) with unified PyTorch + transformers inference engine:
+Three-module design with unified PyTorch + transformers inference engine:
+
+- `typeness.py` — main program, model loading, event-driven loop, speech recognition and LLM inference
+- `hotkey.py` — global keyboard listener (Shift+Win+A toggle via pynput)
+- `clipboard.py` — clipboard write and auto-paste (pyperclip + pynput Controller)
+
+### Models
 
 - **Speech recognition**: Whisper large-v3-turbo (FP16, ~3.5 GB VRAM)
 - **Text post-processing**: Qwen3-1.7B (FP16, ~3.4 GB VRAM)

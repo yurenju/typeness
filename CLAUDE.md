@@ -2,7 +2,11 @@
 
 ## Architecture
 
-Single-file MVP: all code lives in `typeness.py`. No modules, no packages.
+Three-module design:
+
+- `typeness.py` — main program: model loading, event-driven loop (queue.Queue), audio recording (start/stop split), Whisper transcription, LLM post-processing, auto-paste orchestration
+- `hotkey.py` — global keyboard listener: Shift+Win+A toggle via pynput, injected-event filtering, busy-state lock
+- `clipboard.py` — clipboard and auto-paste: pyperclip for clipboard write, pynput Controller for Ctrl+V simulation
 
 ## Tech Stack
 
@@ -11,6 +15,8 @@ Single-file MVP: all code lives in `typeness.py`. No modules, no packages.
 - **Speech recognition**: Whisper large-v3-turbo (`openai/whisper-large-v3-turbo`), FP16
 - **Text post-processing**: Qwen3-1.7B (`Qwen/Qwen3-1.7B`), FP16
 - **Audio capture**: sounddevice (16kHz, mono, float32)
+- **Global hotkey**: pynput (keyboard Listener + Controller)
+- **Clipboard**: pyperclip
 
 ## Key Technical Notes
 
