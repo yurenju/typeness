@@ -28,7 +28,7 @@ Dependencies include `pynput` (global hotkey listener) and `pyperclip` (clipboar
 ## Usage
 
 ```bash
-uv run python typeness.py
+uv run typeness
 ```
 
 On first run, Whisper (`openai/whisper-large-v3-turbo`) and Qwen3 (`Qwen/Qwen3-1.7B`) models will be downloaded from HuggingFace automatically.
@@ -50,7 +50,9 @@ On first run, Whisper (`openai/whisper-large-v3-turbo`) and Qwen3 (`Qwen/Qwen3-1
 
 Three-module design with unified PyTorch + transformers inference engine:
 
-- `typeness.py` — main program, model loading, event-driven loop, speech recognition and LLM inference
+Source code lives in `src/typeness/`:
+
+- `main.py` — main program, model loading, event-driven loop, speech recognition and LLM inference
 - `hotkey.py` — global keyboard listener (Shift+Win+A toggle via pynput)
 - `clipboard.py` — clipboard write and auto-paste (pyperclip + pynput Controller)
 

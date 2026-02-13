@@ -2,11 +2,11 @@
 
 ## Architecture
 
-Three-module design:
+Source code lives in `src/typeness/` (src layout). Three-module design:
 
-- `typeness.py` — main program: model loading, event-driven loop (queue.Queue), audio recording (start/stop split), Whisper transcription, LLM post-processing, auto-paste orchestration
-- `hotkey.py` — global keyboard listener: Shift+Win+A toggle via pynput, injected-event filtering, busy-state lock
-- `clipboard.py` — clipboard and auto-paste: pyperclip for clipboard write, pynput Controller for Ctrl+V simulation
+- `src/typeness/main.py` — main program: model loading, event-driven loop (queue.Queue), audio recording (start/stop split), Whisper transcription, LLM post-processing, auto-paste orchestration
+- `src/typeness/hotkey.py` — global keyboard listener: Shift+Win+A toggle via pynput, injected-event filtering, busy-state lock
+- `src/typeness/clipboard.py` — clipboard and auto-paste: pyperclip for clipboard write, pynput Controller for Ctrl+V simulation
 
 ## Tech Stack
 
@@ -40,7 +40,7 @@ PyTorch cu130 wheels are configured via `[tool.uv.sources]` in `pyproject.toml`.
 ## Running
 
 ```bash
-uv run python typeness.py
+uv run typeness
 ```
 
 ## GPU Requirements

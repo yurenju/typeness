@@ -15,8 +15,8 @@ from transformers import (
     pipeline,
 )
 
-from clipboard import paste_text
-from hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
+from typeness.clipboard import paste_text
+from typeness.hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
 
 # Suppress noisy warnings from transformers (duplicate logits-processor, invalid generation flags)
 transformers.logging.set_verbosity_error()
@@ -321,10 +321,3 @@ def main():
 
     finally:
         listener.stop()
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\nBye!")
