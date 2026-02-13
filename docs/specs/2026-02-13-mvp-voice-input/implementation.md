@@ -7,7 +7,7 @@
 
 ## 任務概要
 
-- [ ] 使用 uv 初始化專案並安裝依賴
+- [x] 使用 uv 初始化專案並安裝依賴
 - [ ] 實作錄音控制模組
 - [ ] 實作 Whisper 語音辨識模組
 - [ ] 實作 LLM 文字後處理模組
@@ -37,7 +37,9 @@
 - 執行 `uv run python -c "import sounddevice; print(sounddevice.query_devices())"` 確認可列出音訊裝置
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+[方向調整] 原計畫將 PyTorch 排除在 pyproject.toml 之外，僅透過手動 `uv pip install --index-url` 安裝。但 `uv run` 會觸發依賴解析，將 cu130 版 torch 替換為 CPU 版。改用 `[tool.uv.index]` + `[tool.uv.sources]` 在 pyproject.toml 中指定 PyTorch 從 cu130 index 安裝，確保 `uv sync` 和 `uv run` 都能取得正確版本。
+
+[後續依賴] PyTorch 已透過 `tool.uv.sources` 鎖定 cu130 index，後續若需新增 PyTorch 相關套件（如 torchvision），也需在 `[tool.uv.sources]` 中指定相同 index。
 
 ---
 
