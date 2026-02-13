@@ -11,6 +11,8 @@ dependencies = [
     "accelerate",
     "sounddevice",
     "numpy",
+    "pynput",
+    "pyperclip",
 ]
 
 [[tool.uv.index]]
