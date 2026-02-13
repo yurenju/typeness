@@ -1,6 +1,7 @@
+import queue
 import re
 import time
-import threading
+
 import numpy as np
 import sounddevice as sd
 import torch
@@ -11,6 +12,9 @@ from transformers import (
     AutoTokenizer,
     pipeline,
 )
+
+from clipboard import paste_text
+from hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
 
 
 SAMPLE_RATE = 16000
@@ -48,43 +52,50 @@ LLM_SYSTEM_PROMPT = """你是語音轉文字的後處理工具。你的唯一功
 直接輸出整理後的文字，不加任何說明。"""
 
 
-def record_audio() -> np.ndarray:
-    """Record audio from microphone until Enter is pressed.
+# -- Audio recording (shared state for start/stop split) --
 
-    Uses sounddevice.InputStream with callback mode.
-    Returns the recorded audio as a 1D float32 numpy array.
-    """
-    chunks: list[np.ndarray] = []
-    stop_event = threading.Event()
+_audio_stream: sd.InputStream | None = None
+_audio_chunks: list[np.ndarray] = []
 
-    def callback(indata: np.ndarray, frames: int, time_info, status) -> None:
-        if status:
-            print(f"  [audio warning] {status}")
-        chunks.append(indata.copy())
 
-    stream = sd.InputStream(
+def _audio_callback(indata: np.ndarray, frames: int, time_info, status) -> None:
+    if status:
+        print(f"  [audio warning] {status}")
+    _audio_chunks.append(indata.copy())
+
+
+def record_audio_start() -> None:
+    """Start recording audio from the microphone."""
+    global _audio_stream
+    _audio_chunks.clear()
+    _audio_stream = sd.InputStream(
         samplerate=SAMPLE_RATE,
         channels=CHANNELS,
         dtype=DTYPE,
-        callback=callback,
+        callback=_audio_callback,
     )
+    _audio_stream.start()
+    print("Recording...")
 
-    print("Recording... (press Enter to stop)")
-    stream.start()
 
-    input()
-    stop_event.set()
+def record_audio_stop() -> np.ndarray:
+    """Stop recording and return the audio as a 1D float32 numpy array."""
+    global _audio_stream
+    if _audio_stream is not None:
+        _audio_stream.stop()
+        _audio_stream.close()
+        _audio_stream = None
 
-    stream.stop()
-    stream.close()
-
-    if not chunks:
+    if not _audio_chunks:
         return np.array([], dtype=np.float32)
 
-    audio = np.concatenate(chunks, axis=0).flatten()
+    audio = np.concatenate(_audio_chunks, axis=0).flatten()
     duration = len(audio) / SAMPLE_RATE
     print(f"Recorded {duration:.1f}s of audio")
     return audio
+
+
+# -- Model loading and inference --
 
 
 def load_whisper():
@@ -114,10 +125,7 @@ def load_whisper():
 
 
 def transcribe(asr_pipeline, processor, audio: np.ndarray) -> str:
-    """Transcribe audio using the Whisper pipeline.
-
-    Returns the transcribed text.
-    """
+    """Transcribe audio using the Whisper pipeline."""
     device = asr_pipeline.device
     prompt_ids = processor.get_prompt_ids(WHISPER_INITIAL_PROMPT, return_tensors="pt").to(device)
 
@@ -192,56 +200,84 @@ def process_text(model, tokenizer, text: str) -> str:
     return result
 
 
+# -- Main event loop --
+
+
 def main():
-    """Main loop: load models, then repeatedly record -> transcribe -> process."""
-    print("=== Typeness MVP ===")
+    """Event-driven main loop: hotkey -> record -> transcribe -> process -> paste."""
+    print("=== Typeness ===")
     print("Loading models, please wait...\n")
 
     asr_pipeline, processor = load_whisper()
     llm_model, tokenizer = load_llm()
 
-    print("\nReady! Press Enter to start recording, press Enter again to stop.")
+    event_queue: queue.Queue[str] = queue.Queue()
+    listener = HotkeyListener(event_queue)
+    listener.start()
+
+    print("\nReady! Press Shift+Win+A to start/stop voice input.")
     print("Press Ctrl+C to exit.\n")
 
-    while True:
-        input(">> Press Enter to start recording...")
+    try:
+        while True:
+            try:
+                event = event_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
 
-        # Record
-        audio = record_audio()
-        if len(audio) == 0:
-            print("No audio recorded, skipping.\n")
-            continue
-        rec_duration = len(audio) / SAMPLE_RATE
+            if event == EVENT_START_RECORDING:
+                record_audio_start()
 
-        # Transcribe
-        t0 = time.time()
-        whisper_text = transcribe(asr_pipeline, processor, audio)
-        whisper_elapsed = time.time() - t0
+            elif event == EVENT_STOP_RECORDING:
+                # Stop recording
+                audio = record_audio_stop()
+                print("Processing...")
 
-        if not whisper_text.strip():
-            print("No speech detected, skipping.\n")
-            continue
+                listener.busy = True
+                try:
+                    if len(audio) == 0:
+                        print("No audio recorded, skipping.\n")
+                        continue
 
-        # LLM post-processing
-        t1 = time.time()
-        processed_text = process_text(llm_model, tokenizer, whisper_text)
-        llm_elapsed = time.time() - t1
+                    rec_duration = len(audio) / SAMPLE_RATE
 
-        total_elapsed = whisper_elapsed + llm_elapsed
+                    # Transcribe
+                    t0 = time.time()
+                    whisper_text = transcribe(asr_pipeline, processor, audio)
+                    whisper_elapsed = time.time() - t0
 
-        # Display results
-        print("\n" + "=" * 50)
-        print("[Whisper raw]")
-        print(whisper_text)
-        print("-" * 50)
-        print("[LLM processed]")
-        print(processed_text)
-        print("-" * 50)
-        print(f"Recording duration : {rec_duration:.1f}s")
-        print(f"Whisper latency    : {whisper_elapsed:.2f}s")
-        print(f"LLM latency        : {llm_elapsed:.2f}s")
-        print(f"Total latency      : {total_elapsed:.2f}s")
-        print("=" * 50 + "\n")
+                    if not whisper_text.strip():
+                        print("No speech detected, skipping.\n")
+                        continue
+
+                    # LLM post-processing
+                    t1 = time.time()
+                    processed_text = process_text(llm_model, tokenizer, whisper_text)
+                    llm_elapsed = time.time() - t1
+
+                    total_elapsed = whisper_elapsed + llm_elapsed
+
+                    # Auto-paste to focused window
+                    paste_text(processed_text)
+
+                    # Display results
+                    print("\n" + "=" * 50)
+                    print("[Whisper raw]")
+                    print(whisper_text)
+                    print("-" * 50)
+                    print("[LLM processed]")
+                    print(processed_text)
+                    print("-" * 50)
+                    print(f"Recording duration : {rec_duration:.1f}s")
+                    print(f"Whisper latency    : {whisper_elapsed:.2f}s")
+                    print(f"LLM latency        : {llm_elapsed:.2f}s")
+                    print(f"Total latency      : {total_elapsed:.2f}s")
+                    print("=" * 50 + "\n")
+                finally:
+                    listener.busy = False
+
+    finally:
+        listener.stop()
 
 
 if __name__ == "__main__":
