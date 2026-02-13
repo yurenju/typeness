@@ -1,3 +1,4 @@
+import logging
 import queue
 import re
 import time
@@ -5,6 +6,7 @@ import time
 import numpy as np
 import sounddevice as sd
 import torch
+import transformers
 from transformers import (
     AutoModelForCausalLM,
     AutoModelForSpeechSeq2Seq,
@@ -16,6 +18,8 @@ from transformers import (
 from clipboard import paste_text
 from hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
 
+# Suppress noisy warnings from transformers (duplicate logits-processor, invalid generation flags)
+transformers.logging.set_verbosity_error()
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
@@ -131,6 +135,23 @@ def load_whisper():
     return asr_pipeline, processor
 
 
+# Half-width -> full-width punctuation mapping for CJK text
+_PUNCTUATION_MAP = str.maketrans({
+    ",": "，",
+    ":": "：",
+    ";": "；",
+    "!": "！",
+    "?": "？",
+    "(": "（",
+    ")": "）",
+})
+
+
+def _normalize_punctuation(text: str) -> str:
+    """Replace half-width punctuation with full-width equivalents for CJK text."""
+    return text.translate(_PUNCTUATION_MAP)
+
+
 def transcribe(asr_pipeline, processor, audio: np.ndarray) -> str:
     """Transcribe audio using the Whisper pipeline."""
     device = asr_pipeline.device
@@ -148,7 +169,7 @@ def transcribe(asr_pipeline, processor, audio: np.ndarray) -> str:
     )
 
     elapsed = time.time() - start
-    text = result["text"]
+    text = _normalize_punctuation(result["text"])
     print(f"Whisper result ({elapsed:.2f}s): {text}")
     return text
 
