@@ -22,9 +22,10 @@
 **實作要點**
 - 在專案根目錄執行 `uv init` 初始化 Python 專案
 - 編輯 `pyproject.toml`，設定 `requires-python = ">=3.10,<3.13"`
+- 在 `pyproject.toml` 的 `[project] dependencies` 中宣告非 PyTorch 依賴：`transformers`、`accelerate`、`sounddevice`、`numpy`
 - 建立虛擬環境：`uv venv .venv --python 3.12`
-- 安裝 PyTorch（RTX 5090 Blackwell 相容）：`uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu130`
-- 安裝其他依賴：`uv pip install transformers accelerate sounddevice numpy`
+- 安裝專案依賴：`uv pip install -e .`
+- 安裝 PyTorch（RTX 5090 Blackwell 相容，需單獨指定 index-url）：`uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu130`
 - 驗證 PyTorch 能正確偵測 CUDA GPU
 
 **相關檔案**
