@@ -152,6 +152,19 @@ def _normalize_punctuation(text: str) -> str:
     return text.translate(_PUNCTUATION_MAP)
 
 
+def _add_cjk_spacing(text: str) -> str:
+    """Insert a space between CJK and Latin/digit characters where missing."""
+    # CJK before Latin/digit: 中A -> 中 A
+    text = re.sub(
+        r"([\u4e00-\u9fff\u3400-\u4dbf])([A-Za-z0-9])", r"\1 \2", text
+    )
+    # Latin/digit before CJK: A中 -> A 中 (but not punctuation before CJK)
+    text = re.sub(
+        r"([A-Za-z0-9])([\u4e00-\u9fff\u3400-\u4dbf])", r"\1 \2", text
+    )
+    return text
+
+
 def transcribe(asr_pipeline, processor, audio: np.ndarray) -> str:
     """Transcribe audio using the Whisper pipeline."""
     device = asr_pipeline.device
@@ -222,6 +235,9 @@ def process_text(model, tokenizer, text: str) -> str:
 
     # Strip Qwen3 think block if present (even when /no_think is used)
     result = re.sub(r"<think>.*?</think>\s*", "", raw, flags=re.DOTALL).strip()
+
+    # Ensure consistent spacing between CJK and Latin/digit characters
+    result = _add_cjk_spacing(result)
 
     elapsed = time.time() - start
     print(f"LLM result ({elapsed:.2f}s): {result}")
