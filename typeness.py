@@ -1,3 +1,4 @@
+import re
 import time
 import threading
 import numpy as np
@@ -178,8 +179,6 @@ def process_text(model, tokenizer, text: str) -> str:
     raw = tokenizer.decode(generated_ids, skip_special_tokens=True)
 
     # Strip Qwen3 think block if present (even when /no_think is used)
-    import re
-
     result = re.sub(r"<think>.*?</think>\s*", "", raw, flags=re.DOTALL).strip()
 
     elapsed = time.time() - start
@@ -187,11 +186,60 @@ def process_text(model, tokenizer, text: str) -> str:
     return result
 
 
+def main():
+    """Main loop: load models, then repeatedly record -> transcribe -> process."""
+    print("=== Typeness MVP ===")
+    print("Loading models, please wait...\n")
+
+    asr_pipeline, processor = load_whisper()
+    llm_model, tokenizer = load_llm()
+
+    print("\nReady! Press Enter to start recording, press Enter again to stop.")
+    print("Press Ctrl+C to exit.\n")
+
+    while True:
+        input(">> Press Enter to start recording...")
+
+        # Record
+        audio = record_audio()
+        if len(audio) == 0:
+            print("No audio recorded, skipping.\n")
+            continue
+        rec_duration = len(audio) / SAMPLE_RATE
+
+        # Transcribe
+        t0 = time.time()
+        whisper_text = transcribe(asr_pipeline, processor, audio)
+        whisper_elapsed = time.time() - t0
+
+        if not whisper_text.strip():
+            print("No speech detected, skipping.\n")
+            continue
+
+        # LLM post-processing
+        t1 = time.time()
+        processed_text = process_text(llm_model, tokenizer, whisper_text)
+        llm_elapsed = time.time() - t1
+
+        total_elapsed = whisper_elapsed + llm_elapsed
+
+        # Display results
+        print("\n" + "=" * 50)
+        print("[Whisper raw]")
+        print(whisper_text)
+        print("-" * 50)
+        print("[LLM processed]")
+        print(processed_text)
+        print("-" * 50)
+        print(f"Recording duration : {rec_duration:.1f}s")
+        print(f"Whisper latency    : {whisper_elapsed:.2f}s")
+        print(f"LLM latency        : {llm_elapsed:.2f}s")
+        print(f"Total latency      : {total_elapsed:.2f}s")
+        print("=" * 50 + "\n")
+
+
 if __name__ == "__main__":
-    print("=== Typeness LLM Test ===")
-
-    model, tokenizer = load_llm()
-
-    test_text = "嗯那個就是說我想要買三個東西第一個是蘋果第二個是香蕉第三個是橘子"
-    print(f"\nInput: {test_text}")
-    process_text(model, tokenizer, test_text)
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nBye!")
