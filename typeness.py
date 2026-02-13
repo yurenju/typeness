@@ -20,6 +20,7 @@ from hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
 SAMPLE_RATE = 16000
 CHANNELS = 1
 DTYPE = "float32"
+MIN_RECORDING_SECONDS = 0.3
 
 WHISPER_MODEL_ID = "openai/whisper-large-v3-turbo"
 WHISPER_INITIAL_PROMPT = "以下是繁體中文的語音內容。"
@@ -235,11 +236,10 @@ def main():
 
                 listener.busy = True
                 try:
-                    if len(audio) == 0:
-                        print("No audio recorded, skipping.\n")
-                        continue
-
                     rec_duration = len(audio) / SAMPLE_RATE
+                    if rec_duration < MIN_RECORDING_SECONDS:
+                        print("Recording too short, skipping.\n")
+                        continue
 
                     # Transcribe
                     t0 = time.time()
