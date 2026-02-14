@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-typeness = "typeness.main:main"
+typeness = "typeness.__main__:cli"
 
 [build-system]
 requires = ["hatchling"]

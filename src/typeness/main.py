@@ -10,6 +10,7 @@ import transformers
 
 from typeness.audio import MIN_RECORDING_SECONDS, SAMPLE_RATE, record_audio_start, record_audio_stop
 from typeness.clipboard import paste_text
+from typeness.debug import DEBUG_DIR, save_capture
 from typeness.hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
 from typeness.postprocess import load_llm, process_text
 from typeness.transcribe import load_whisper, transcribe
@@ -18,9 +19,11 @@ from typeness.transcribe import load_whisper, transcribe
 transformers.logging.set_verbosity_error()
 
 
-def main():
+def main(*, debug: bool = False):
     """Event-driven main loop: hotkey -> record -> transcribe -> process -> paste."""
     print("=== Typeness ===")
+    if debug:
+        print(f"Debug mode ON — captures saved to {DEBUG_DIR}/")
     print("Loading models, please wait...\n")
 
     asr_pipeline, processor = load_whisper()
@@ -73,6 +76,13 @@ def main():
 
                     # Auto-paste to focused window
                     paste_text(processed_text)
+
+                    # Debug capture (after paste so it doesn't affect perceived latency)
+                    if debug:
+                        save_capture(
+                            audio, whisper_text, processed_text,
+                            rec_duration, whisper_elapsed, llm_elapsed,
+                        )
 
                     # Display results
                     print("\n" + "=" * 50)

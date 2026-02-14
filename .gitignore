@@ -3,3 +3,4 @@ nul
 .venv/
 __pycache__/
 *.egg-info/
+debug/
