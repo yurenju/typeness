@@ -2,9 +2,12 @@
 
 ## Architecture
 
-Source code lives in `src/typeness/` (src layout). Three-module design:
+Source code lives in `src/typeness/` (src layout):
 
-- `src/typeness/main.py` — main program: model loading, event-driven loop (queue.Queue), audio recording (start/stop split), Whisper transcription, LLM post-processing, auto-paste orchestration
+- `src/typeness/main.py` — event-driven loop (queue.Queue), orchestrates all modules
+- `src/typeness/audio.py` — microphone recording via sounddevice (start/stop split)
+- `src/typeness/transcribe.py` — Whisper model loading, speech-to-text, CJK text normalization
+- `src/typeness/postprocess.py` — Qwen3 LLM loading, filler-word removal, punctuation, list formatting
 - `src/typeness/hotkey.py` — global keyboard listener: Shift+Win+A toggle via pynput, injected-event filtering, busy-state lock
 - `src/typeness/clipboard.py` — clipboard and auto-paste: pyperclip for clipboard write, pynput Controller for Ctrl+V simulation
 

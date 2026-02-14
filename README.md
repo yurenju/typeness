@@ -48,11 +48,12 @@ On first run, Whisper (`openai/whisper-large-v3-turbo`) and Qwen3 (`Qwen/Qwen3-1
 
 ## Architecture
 
-Three-module design with unified PyTorch + transformers inference engine:
+Modular design with unified PyTorch + transformers inference engine. Source code lives in `src/typeness/`:
 
-Source code lives in `src/typeness/`:
-
-- `main.py` — main program, model loading, event-driven loop, speech recognition and LLM inference
+- `main.py` — event-driven loop, orchestrates all modules
+- `audio.py` — microphone recording (sounddevice)
+- `transcribe.py` — Whisper speech-to-text and CJK text normalization
+- `postprocess.py` — Qwen3 LLM text cleanup (filler removal, punctuation, list formatting)
 - `hotkey.py` — global keyboard listener (Shift+Win+A toggle via pynput)
 - `clipboard.py` — clipboard write and auto-paste (pyperclip + pynput Controller)
 
