@@ -35,6 +35,15 @@ def record_audio_start() -> None:
     print("Recording...")
 
 
+def stop_stream() -> None:
+    """Stop and close the audio stream if active (for cleanup on shutdown)."""
+    global _audio_stream
+    if _audio_stream is not None:
+        _audio_stream.stop()
+        _audio_stream.close()
+        _audio_stream = None
+
+
 def record_audio_stop() -> np.ndarray:
     """Stop recording and return the audio as a 1D float32 numpy array."""
     global _audio_stream

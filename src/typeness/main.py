@@ -4,11 +4,12 @@ Event-driven loop: hotkey -> record -> transcribe -> process -> paste.
 """
 
 import queue
+import signal
 import time
 
 import transformers
 
-from typeness.audio import MIN_RECORDING_SECONDS, SAMPLE_RATE, record_audio_start, record_audio_stop
+from typeness.audio import MIN_RECORDING_SECONDS, SAMPLE_RATE, record_audio_start, record_audio_stop, stop_stream
 from typeness.clipboard import paste_text
 from typeness.debug import DEBUG_DIR, save_capture
 from typeness.hotkey import EVENT_START_RECORDING, EVENT_STOP_RECORDING, HotkeyListener
@@ -36,8 +37,17 @@ def main(*, debug: bool = False):
     print("\nReady! Press Shift+Win+A to start/stop voice input.")
     print("Press Ctrl+C to exit.\n")
 
+    shutdown = False
+
+    def _signal_handler(signum, frame):
+        nonlocal shutdown
+        shutdown = True
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
     try:
-        while True:
+        while not shutdown:
             try:
                 event = event_queue.get(timeout=0.5)
             except queue.Empty:
@@ -101,4 +111,7 @@ def main(*, debug: bool = False):
                     listener.busy = False
 
     finally:
+        print("\nShutting down...")
+        stop_stream()
         listener.stop()
+        print("Bye!")
