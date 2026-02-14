@@ -82,6 +82,7 @@ def transcribe(asr_pipeline, processor, audio: np.ndarray) -> str:
 
     result = asr_pipeline(
         audio,
+        return_timestamps=True,
         generate_kwargs={
             "language": "zh",
             "task": "transcribe",
