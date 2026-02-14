@@ -44,6 +44,7 @@ PyTorch cu130 wheels are configured via `[tool.uv.sources]` in `pyproject.toml`.
 
 ```bash
 uv run typeness
+uv run typeness --debug   # save recordings to debug/ for diagnostics
 ```
 
 ## GPU Requirements

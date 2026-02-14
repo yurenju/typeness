@@ -31,6 +31,12 @@ Dependencies include `pynput` (global hotkey listener) and `pyperclip` (clipboar
 uv run typeness
 ```
 
+To enable debug mode (saves each recording as WAV + JSON to `debug/`):
+
+```bash
+uv run typeness --debug
+```
+
 On first run, Whisper (`openai/whisper-large-v3-turbo`) and Qwen3 (`Qwen/Qwen3-1.7B`) models will be downloaded from HuggingFace automatically.
 
 ### How it works
