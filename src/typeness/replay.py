@@ -1,0 +1,187 @@
+"""Regression test replay engine for Typeness.
+
+Loads test fixtures (WAV audio + expected text) and replays them through
+the Whisper and/or LLM pipeline to detect regressions.
+"""
+
+import json
+import time
+import wave
+from pathlib import Path
+
+import numpy as np
+
+FIXTURES_DIR = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+CASES_FILE = FIXTURES_DIR / "cases.json"
+
+
+def load_cases(case_id=None, tag=None):
+    """Load test cases from cases.json, optionally filtering by ID or tag."""
+    with open(CASES_FILE, encoding="utf-8") as f:
+        data = json.load(f)
+
+    cases = data["cases"]
+
+    if case_id is not None:
+        cases = [c for c in cases if c["id"] == case_id]
+
+    if tag is not None:
+        cases = [c for c in cases if tag in c.get("tags", [])]
+
+    return cases
+
+
+def _load_wav(audio_path):
+    """Read a WAV file and return float32 numpy array (inverse of debug save)."""
+    with wave.open(str(audio_path), "rb") as wf:
+        raw = wf.readframes(wf.getnframes())
+        int16_data = np.frombuffer(raw, dtype=np.int16)
+        return int16_data.astype(np.float32) / 32767.0
+
+
+def replay_whisper(asr_pipeline, processor, audio_path):
+    """Replay a WAV file through Whisper and return (text, latency)."""
+    from typeness.transcribe import transcribe
+
+    audio = _load_wav(audio_path)
+    start = time.time()
+    text = transcribe(asr_pipeline, processor, audio)
+    latency = time.time() - start
+    return text, latency
+
+
+def replay_llm(llm_model, tokenizer, whisper_text):
+    """Replay text through LLM post-processing and return (text, latency)."""
+    from typeness.postprocess import process_text
+
+    start = time.time()
+    text = process_text(llm_model, tokenizer, whisper_text)
+    latency = time.time() - start
+    return text, latency
+
+
+def replay_full(asr_pipeline, processor, llm_model, tokenizer, audio_path):
+    """Run full pipeline: audio -> Whisper -> LLM. Return result dict."""
+    from typeness.postprocess import process_text
+    from typeness.transcribe import transcribe
+
+    audio = _load_wav(audio_path)
+
+    start_w = time.time()
+    whisper_text = transcribe(asr_pipeline, processor, audio)
+    whisper_latency = time.time() - start_w
+
+    start_l = time.time()
+    processed_text = process_text(llm_model, tokenizer, whisper_text)
+    llm_latency = time.time() - start_l
+
+    return {
+        "whisper_text": whisper_text,
+        "processed_text": processed_text,
+        "whisper_latency": whisper_latency,
+        "llm_latency": llm_latency,
+    }
+
+
+def _char_diff_ratio(expected, actual):
+    """Compute character-level diff ratio: diff chars / max(len(expected), len(actual))."""
+    if expected == actual:
+        return 0.0
+    max_len = max(len(expected), len(actual))
+    if max_len == 0:
+        return 0.0
+    # Count differing characters using simple alignment
+    diff_count = 0
+    for i in range(max(len(expected), len(actual))):
+        ch_e = expected[i] if i < len(expected) else ""
+        ch_a = actual[i] if i < len(actual) else ""
+        if ch_e != ch_a:
+            diff_count += 1
+    return diff_count / max_len
+
+
+def run_all_cases(stage, asr_pipeline=None, processor=None,
+                  llm_model=None, tokenizer=None,
+                  case_id=None, tag=None):
+    """Run replay on all matching cases and return structured results.
+
+    Args:
+        stage: "whisper", "llm", or "full"
+        asr_pipeline, processor: Whisper model (needed for whisper/full)
+        llm_model, tokenizer: LLM model (needed for llm/full)
+        case_id: Filter to a single case ID
+        tag: Filter to cases with this tag
+
+    Returns:
+        List of result dicts with case_id, description, stage_tested,
+        expected, actual, match, char_diff_ratio.
+    """
+    cases = load_cases(case_id=case_id, tag=tag)
+    results = []
+
+    for case in cases:
+        cid = case["id"]
+        audio_path = FIXTURES_DIR / case["audio_file"]
+
+        if stage == "whisper":
+            actual, _ = replay_whisper(asr_pipeline, processor, audio_path)
+            expected = case.get("whisper_expected")
+            result_entry = {
+                "case_id": cid,
+                "description": case.get("description", ""),
+                "stage_tested": "whisper",
+                "expected": expected,
+                "actual": actual,
+            }
+
+        elif stage == "llm":
+            # For LLM-only, use the whisper_expected as input
+            whisper_input = case.get("whisper_expected")
+            if whisper_input is None:
+                print(f"  Skipping {cid}: no whisper_expected for LLM-only replay")
+                continue
+            actual, _ = replay_llm(llm_model, tokenizer, whisper_input)
+            expected = case["processed_expected"]
+            result_entry = {
+                "case_id": cid,
+                "description": case.get("description", ""),
+                "stage_tested": "llm",
+                "expected": expected,
+                "actual": actual,
+            }
+
+        elif stage == "full":
+            full_result = replay_full(
+                asr_pipeline, processor, llm_model, tokenizer, audio_path
+            )
+            expected = case["processed_expected"]
+            actual = full_result["processed_text"]
+            result_entry = {
+                "case_id": cid,
+                "description": case.get("description", ""),
+                "stage_tested": "full",
+                "expected": expected,
+                "actual": actual,
+                "whisper_text": full_result["whisper_text"],
+                "processed_text": full_result["processed_text"],
+            }
+
+        else:
+            raise ValueError(f"Unknown stage: {stage}")
+
+        # Determine match status
+        if expected is None:
+            result_entry["match"] = "skipped"
+            result_entry["char_diff_ratio"] = None
+        elif expected == actual:
+            result_entry["match"] = "exact"
+            result_entry["char_diff_ratio"] = 0.0
+        else:
+            result_entry["match"] = "different"
+            result_entry["char_diff_ratio"] = round(
+                _char_diff_ratio(expected, actual), 4
+            )
+
+        results.append(result_entry)
+
+    return results

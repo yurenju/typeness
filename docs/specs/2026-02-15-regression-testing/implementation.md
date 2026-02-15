@@ -8,7 +8,7 @@
 ## 任務概要
 
 - [x] 建立測試案例格式與 fixtures 目錄
-- [ ] 實作重播引擎 replay.py
+- [x] 實作重播引擎 replay.py
 - [ ] 建立 CLI 入口與報告輸出
 - [ ] 撰寫 /fix-transcription skill
 - [ ] 撰寫 /run-regression skill
@@ -100,7 +100,7 @@
 - 手動建立一個簡單的測試案例（用現有 debug 音頻），執行 `replay_llm` 確認能產生結果
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+照預期開發
 
 ---
 
