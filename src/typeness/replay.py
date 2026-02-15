@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 import time
 import wave
@@ -21,12 +22,21 @@ from pathlib import Path
 
 import numpy as np
 
+# Suppress transformers/HF Hub progress bars to keep output concise
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TRANSFORMERS_NO_TQDM", "1")
+
 FIXTURES_DIR = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
 CASES_FILE = FIXTURES_DIR / "cases.json"
 
 
 def load_cases(case_id=None, tag=None):
     """Load test cases from cases.json, optionally filtering by ID or tag."""
+    if not CASES_FILE.exists():
+        print(f"No cases.json found at {CASES_FILE}")
+        print("Copy cases.example.json to cases.json and add your test cases.")
+        return []
+
     with open(CASES_FILE, encoding="utf-8") as f:
         data = json.load(f)
 

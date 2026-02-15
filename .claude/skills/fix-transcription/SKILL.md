@@ -34,7 +34,7 @@ description: 修正語音辨識錯誤：從 debug 資料建立測試案例，診
 預期輸出確認後：
 
 1. 複製 `debug/<case_id>_audio.wav` 到 `tests/fixtures/<case_id>_audio.wav`
-2. 讀取目前的 `tests/fixtures/cases.json`
+2. 讀取目前的 `tests/fixtures/cases.json`。若檔案不存在，先以 `{"cases": []}` 建立它。
 3. 新增一筆案例：
    ```json
    {

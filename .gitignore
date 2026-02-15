@@ -4,3 +4,5 @@ nul
 __pycache__/
 *.egg-info/
 debug/
+tests/fixtures/*
+!tests/fixtures/cases.example.json

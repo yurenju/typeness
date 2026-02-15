@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "id": "20260101_120000",
+      "audio_file": "20260101_120000_audio.wav",
+      "description": "Example: brief description of the test scenario",
+      "whisper_expected": "raw Whisper output text here",
+      "processed_expected": "ideal LLM output text here",
+      "processed_acceptable": "acceptable LLM output (optional, omit if same as expected)",
+      "tags": ["short", "technical", "mixed-lang"],
+      "notes": "any special notes, or null"
+    }
+  ]
+}
