@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import json
+import sys
 import time
 import wave
 from datetime import datetime
@@ -179,12 +180,18 @@ def run_all_cases(stage, asr_pipeline=None, processor=None,
             raise ValueError(f"Unknown stage: {stage}")
 
         # Determine match status
+        acceptable = case.get("processed_acceptable") if stage in ("llm", "full") else case.get("whisper_acceptable")
         if expected is None:
             result_entry["match"] = "skipped"
             result_entry["char_diff_ratio"] = None
         elif expected == actual:
             result_entry["match"] = "exact"
             result_entry["char_diff_ratio"] = 0.0
+        elif acceptable is not None and acceptable == actual:
+            result_entry["match"] = "acceptable"
+            result_entry["char_diff_ratio"] = round(
+                _char_diff_ratio(expected, actual), 4
+            )
         else:
             result_entry["match"] = "different"
             result_entry["char_diff_ratio"] = round(
@@ -199,6 +206,7 @@ def run_all_cases(stage, asr_pipeline=None, processor=None,
 def _generate_report(stage, results, output_path):
     """Generate JSON report and print console summary."""
     exact_count = sum(1 for r in results if r.get("match") == "exact")
+    acceptable_count = sum(1 for r in results if r.get("match") == "acceptable")
     different_count = sum(1 for r in results if r.get("match") == "different")
     total = len(results)
 
@@ -207,6 +215,7 @@ def _generate_report(stage, results, output_path):
         "stage": stage,
         "total": total,
         "exact_match": exact_count,
+        "acceptable": acceptable_count,
         "different": different_count,
         "results": results,
     }
@@ -216,7 +225,7 @@ def _generate_report(stage, results, output_path):
 
     # Console summary
     print(f"\n=== Replay Results ===")
-    print(f"Total: {total} | Exact: {exact_count} | Different: {different_count}")
+    print(f"Total: {total} | Exact: {exact_count} | Acceptable: {acceptable_count} | Different: {different_count}")
     print()
 
     for r in results:
@@ -224,18 +233,23 @@ def _generate_report(stage, results, output_path):
         desc = r.get("description", "")
         match = r.get("match", "unknown")
         if match == "exact":
-            print(f"[EXACT]     {cid} - {desc}")
+            print(f"[EXACT]      {cid} - {desc}")
+        elif match == "acceptable":
+            ratio = r.get("char_diff_ratio", 0)
+            print(f"[ACCEPTABLE] {cid} - {desc} (diff: {ratio * 100:.1f}%)")
         elif match == "different":
             ratio = r.get("char_diff_ratio", 0)
-            print(f"[DIFFERENT] {cid} - {desc} (diff: {ratio * 100:.1f}%)")
+            print(f"[DIFFERENT]  {cid} - {desc} (diff: {ratio * 100:.1f}%)")
         elif match == "skipped":
-            print(f"[SKIPPED]   {cid} - {desc}")
+            print(f"[SKIPPED]    {cid} - {desc}")
 
     print(f"\nReport saved to: {output_path}")
     return report
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description="Typeness regression test replay engine"
     )

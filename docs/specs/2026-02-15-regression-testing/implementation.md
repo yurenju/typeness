@@ -165,24 +165,27 @@
 
 **實作要點**
 - 建立 `.claude/skills/fix-transcription/SKILL.md`
-- Skill 的觸發方式：使用者執行 `/fix-transcription <case_id>` 或 `/fix-transcription`（不帶參數時列出可用案例）
+- Skill 的觸發方式：使用者執行 `/fix-transcription <問題描述>`
+- 典型使用情境：使用者在 IDE 中打開 `debug/<id>_result.json`，然後輸入 `/fix-transcription 少了一句前導語` 或 `/fix-transcription 標點不對`
 - SKILL.md frontmatter：
   ```yaml
   ---
   description: Fix a voice transcription error by creating a test case from debug data, then help diagnose and fix the issue
-  argument-hint: "[case_id] [expected_output_description]"
+  argument-hint: "[問題描述，例如：少了前導語 / 標點錯了 / 英文術語間距不對]"
   ---
   ```
 - Skill 引導 Claude Code 執行以下步驟：
 
-  **步驟 1：載入案例**
-  - 若有提供 `case_id`，讀取 `debug/<case_id>_result.json`
-  - 若未提供，列出 `debug/` 中所有 `*_result.json` 的時間戳和摘要（whisper_text 前 50 字），讓使用者選擇
-  - 顯示該案例的 Whisper 原始輸出和 LLM 處理後輸出
+  **步驟 1：辨識案例**
+  - 優先從 IDE 目前開啟的檔案（`ide_selection` 或 `ide_opened_file`）自動偵測 `debug/*_result.json`，取得 case_id
+  - 若參數中包含 case_id 格式的字串（如 `20260215_084842`），以參數為準
+  - 若無法自動偵測，列出 `debug/` 中所有 `*_result.json` 的時間戳和摘要（whisper_text 前 50 字），讓使用者選擇
+  - 讀取該案例的 JSON，顯示 Whisper 原始輸出和 LLM 處理後輸出
 
   **步驟 2：確認預期輸出**
-  - 詢問使用者：預期的正確輸出是什麼？
-  - 使用者可以直接貼上預期文字，或描述「哪裡有問題」讓 Claude Code 推敲預期輸出
+  - 根據使用者在參數中描述的問題（如「少了前導語」「標點錯了」），對照案例的實際輸出，推敲預期的正確輸出
+  - 將推敲結果顯示給使用者確認，使用者可以直接同意或修正
+  - 若使用者未在參數中描述問題，則詢問使用者：預期的正確輸出是什麼？
 
   **步驟 3：建立測試案例**
   - 將音頻 WAV 從 `debug/` 複製到 `tests/fixtures/`
