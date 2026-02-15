@@ -2,11 +2,20 @@
 
 Loads test fixtures (WAV audio + expected text) and replays them through
 the Whisper and/or LLM pipeline to detect regressions.
+
+Usage:
+    uv run python -m typeness.replay --stage llm
+    uv run python -m typeness.replay --stage whisper
+    uv run python -m typeness.replay --stage full
+    uv run python -m typeness.replay --case 20260215_084842 --stage llm
+    uv run python -m typeness.replay --tag short --stage llm
 """
 
+import argparse
 import json
 import time
 import wave
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -185,3 +194,98 @@ def run_all_cases(stage, asr_pipeline=None, processor=None,
         results.append(result_entry)
 
     return results
+
+
+def _generate_report(stage, results, output_path):
+    """Generate JSON report and print console summary."""
+    exact_count = sum(1 for r in results if r.get("match") == "exact")
+    different_count = sum(1 for r in results if r.get("match") == "different")
+    total = len(results)
+
+    report = {
+        "run_timestamp": datetime.now().isoformat(timespec="seconds"),
+        "stage": stage,
+        "total": total,
+        "exact_match": exact_count,
+        "different": different_count,
+        "results": results,
+    }
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+
+    # Console summary
+    print(f"\n=== Replay Results ===")
+    print(f"Total: {total} | Exact: {exact_count} | Different: {different_count}")
+    print()
+
+    for r in results:
+        cid = r["case_id"]
+        desc = r.get("description", "")
+        match = r.get("match", "unknown")
+        if match == "exact":
+            print(f"[EXACT]     {cid} - {desc}")
+        elif match == "different":
+            ratio = r.get("char_diff_ratio", 0)
+            print(f"[DIFFERENT] {cid} - {desc} (diff: {ratio * 100:.1f}%)")
+        elif match == "skipped":
+            print(f"[SKIPPED]   {cid} - {desc}")
+
+    print(f"\nReport saved to: {output_path}")
+    return report
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Typeness regression test replay engine"
+    )
+    parser.add_argument(
+        "--stage",
+        choices=["whisper", "llm", "full"],
+        default="full",
+        help="Pipeline stage to replay (default: full)",
+    )
+    parser.add_argument(
+        "--case",
+        default=None,
+        help="Run a single case by ID (e.g. 20260215_084842)",
+    )
+    parser.add_argument(
+        "--tag",
+        default=None,
+        help="Filter cases by tag (e.g. short, long, technical)",
+    )
+    parser.add_argument(
+        "--output",
+        default=str(FIXTURES_DIR / "last_run.json"),
+        help="Report output path (default: tests/fixtures/last_run.json)",
+    )
+    args = parser.parse_args()
+
+    # Load only the models needed for the requested stage
+    asr_pipeline = processor = None
+    llm_model = tokenizer = None
+
+    if args.stage in ("whisper", "full"):
+        from typeness.transcribe import load_whisper
+        asr_pipeline, processor = load_whisper()
+
+    if args.stage in ("llm", "full"):
+        from typeness.postprocess import load_llm
+        llm_model, tokenizer = load_llm()
+
+    results = run_all_cases(
+        stage=args.stage,
+        asr_pipeline=asr_pipeline,
+        processor=processor,
+        llm_model=llm_model,
+        tokenizer=tokenizer,
+        case_id=args.case,
+        tag=args.tag,
+    )
+
+    _generate_report(args.stage, results, args.output)
+
+
+if __name__ == "__main__":
+    main()

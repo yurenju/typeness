@@ -9,7 +9,7 @@
 
 - [x] 建立測試案例格式與 fixtures 目錄
 - [x] 實作重播引擎 replay.py
-- [ ] 建立 CLI 入口與報告輸出
+- [x] 建立 CLI 入口與報告輸出
 - [ ] 撰寫 /fix-transcription skill
 - [ ] 撰寫 /run-regression skill
 - [ ] 從現有 debug 案例建立初始測試集
@@ -157,7 +157,7 @@
 - 在有至少一個 fixture 案例的情況下，執行 `uv run python -m typeness.replay --stage llm` 能產生 `last_run.json`
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+照預期開發
 
 ---
 
