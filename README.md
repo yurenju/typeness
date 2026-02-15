@@ -52,6 +52,22 @@ On first run, Whisper (`openai/whisper-large-v3-turbo`) and Qwen3 (`Qwen/Qwen3-1
    - **Timing stats**: recording duration, Whisper latency, LLM latency, total latency
 7. Press **Ctrl+C** to exit (global keyboard hook is cleaned up)
 
+## Regression Testing
+
+Claude Code skills for maintaining transcription quality:
+
+- **`/fix-transcription`** — Create a test case from a debug recording, diagnose the issue, and fix it
+- **`/run-regression`** — Replay all test cases and judge results (LLM-as-Judge)
+
+Test cases live in `tests/fixtures/` (WAV audio + `cases.json`). The replay engine can also be run directly:
+
+```bash
+uv run python -m typeness.replay --stage llm      # LLM post-processing only (fastest)
+uv run python -m typeness.replay --stage whisper   # Whisper only
+uv run python -m typeness.replay --stage full      # full pipeline
+uv run python -m typeness.replay --help            # all options
+```
+
 ## Architecture
 
 Modular design with unified PyTorch + transformers inference engine. Source code lives in `src/typeness/`:

@@ -13,8 +13,8 @@
 - [x] 撰寫 /fix-transcription skill
 - [x] 撰寫 /run-regression skill
 - [x] 從現有 debug 案例建立初始測試集
-- [ ] 執行驗收測試
-- [ ] 更新專案文件
+- [x] 執行驗收測試
+- [x] 更新專案文件
 
 ## 任務細節
 
@@ -333,7 +333,7 @@
 - `docs/specs/2026-02-15-regression-testing/acceptance-report.md` — 詳細的驗收測試執行報告（執行時生成）
 
 **實作備註**
-<!-- 執行過程中填寫 -->
+使用者自行驗收完成。
 
 ---
 
@@ -354,7 +354,7 @@
 - `README.md` — 更新使用者文件
 
 **實作備註**
-<!-- 執行過程中填寫 -->
+[方向調整] 原計畫同時更新 CLAUDE.md 和 README.md，但評估後 CLAUDE.md 不需要改（replay 是離線開發工具，不屬於 runtime 架構），只更新 README.md 新增 Regression Testing 段落。
 
 ---
 
