@@ -12,7 +12,7 @@
 - [x] 建立 CLI 入口與報告輸出
 - [x] 撰寫 /fix-transcription skill
 - [x] 撰寫 /run-regression skill
-- [ ] 從現有 debug 案例建立初始測試集
+- [x] 從現有 debug 案例建立初始測試集
 - [ ] 執行驗收測試
 - [ ] 更新專案文件
 
@@ -316,7 +316,7 @@
 - 執行 `uv run python -m typeness.replay --stage llm` 全部顯示 `EXACT`
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+照預期開發。選取 4 個新案例 + 1 個既有案例 = 共 5 個：短句 (084842)、問句含英文 (084630)、英文+數字 (104007)、中等長度 (103858)、技術混合語問句 (180535)。LLM replay 結果：4 EXACT + 1 ACCEPTABLE + 0 DIFFERENT。
 
 ---
 
