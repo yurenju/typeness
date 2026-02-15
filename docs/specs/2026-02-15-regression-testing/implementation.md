@@ -11,7 +11,7 @@
 - [x] 實作重播引擎 replay.py
 - [x] 建立 CLI 入口與報告輸出
 - [x] 撰寫 /fix-transcription skill
-- [ ] 撰寫 /run-regression skill
+- [x] 撰寫 /run-regression skill
 - [ ] 從現有 debug 案例建立初始測試集
 - [ ] 執行驗收測試
 - [ ] 更新專案文件
@@ -288,7 +288,7 @@
 - 在 Claude Code 中輸入 `/run-regression` 能觸發 skill
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+照預期開發
 
 ---
 
