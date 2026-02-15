@@ -10,7 +10,7 @@
 - [x] 建立測試案例格式與 fixtures 目錄
 - [x] 實作重播引擎 replay.py
 - [x] 建立 CLI 入口與報告輸出
-- [ ] 撰寫 /fix-transcription skill
+- [x] 撰寫 /fix-transcription skill
 - [ ] 撰寫 /run-regression skill
 - [ ] 從現有 debug 案例建立初始測試集
 - [ ] 執行驗收測試
@@ -216,7 +216,14 @@
 - 在 Claude Code 中輸入 `/fix-transcription` 能觸發 skill
 
 **實作備註**
-<!-- 執行過程中填寫重要的技術決策、障礙和需要傳遞的上下文 -->
+
+已完成 SKILL.md 撰寫並實際執行過一次完整流程（案例 20260215_180535），過程中發現以下需傳遞的上下文：
+
+1. **cases.json 已從 git 排除**：`tests/fixtures/*` 整個目錄都被 gitignore（WAV 太大），只保留 `cases.example.json` 作為 schema 參考。Skill 步驟 3 已更新：若 `cases.json` 不存在，先以 `{"cases": []}` 建立。
+2. **replay.py 已加入缺檔處理**：`load_cases()` 在 `cases.json` 不存在時回傳空 list 並提示使用者，不會拋例外。
+3. **新增 `processed_acceptable` 欄位**：cases.json 支援 `processed_acceptable`（可接受輸出），用於 Whisper 同音字錯誤等超出 LLM 能力的情況。重播引擎匹配 acceptable 時標記為 `"match": "acceptable"`。此欄位為選用。
+4. **replay.py 已抑制 progress bar**：設定 `HF_HUB_DISABLE_PROGRESS_BARS=1` 和 `TRANSFORMERS_NO_TQDM=1`，避免模型載入時輸出過大（原本 80KB+）導致 Claude Code 截斷。
+5. **首次修正案例**：LLM system prompt 新增規則 3（問句保留）和問句範例，修正了問句開頭/結尾被誤刪的問題。
 
 ---
 
