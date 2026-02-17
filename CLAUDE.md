@@ -7,7 +7,7 @@ Source code lives in `src/typeness/` (src layout):
 - `src/typeness/main.py` — event-driven loop (queue.Queue), orchestrates all modules
 - `src/typeness/audio.py` — microphone recording via sounddevice (start/stop split)
 - `src/typeness/transcribe.py` — Whisper model loading, speech-to-text, CJK text normalization
-- `src/typeness/postprocess.py` — Qwen3 LLM loading, filler-word removal, punctuation, list formatting
+- `src/typeness/postprocess.py` — Qwen3 LLM loading, punctuation correction, list formatting
 - `src/typeness/hotkey.py` — global keyboard listener: Shift+Win+A toggle via pynput, injected-event filtering, busy-state lock
 - `src/typeness/clipboard.py` — clipboard and auto-paste: pyperclip for clipboard write, pynput Controller for Ctrl+V simulation
 
@@ -37,7 +37,7 @@ PyTorch cu130 wheels are configured via `[tool.uv.sources]` in `pyproject.toml`.
 
 - `/no_think` directive goes at the start of the user message, not in the system prompt
 - Even with `/no_think`, Qwen3 may produce empty `<think></think>` blocks — strip with regex after decoding
-- Few-shot examples in the system prompt are critical for good filler-word removal and list formatting
+- Few-shot examples in the system prompt are critical for good punctuation correction and list formatting
 - Use `do_sample=False` with `temperature=None, top_p=None` for deterministic output
 
 ## Running
@@ -45,6 +45,22 @@ PyTorch cu130 wheels are configured via `[tool.uv.sources]` in `pyproject.toml`.
 ```bash
 uv run typeness
 uv run typeness --debug   # save recordings to debug/ for diagnostics
+```
+
+## Testing (Regression / Replay)
+
+- `tests/fixtures/cases.json` — test case definitions (whisper_expected, processed_expected, etc.)
+- `tests/fixtures/*_audio.wav` — recorded audio fixtures
+- `tests/fixtures/last_run.json` — latest replay results
+- `debug/` — raw debug recordings and results from `--debug` mode
+
+**None of these files are tracked by git** (audio files are large and may contain private content). Only `tests/fixtures/cases.example.json` is committed as a schema reference. The actual test data lives only on the local machine.
+
+Replay commands:
+```bash
+uv run python -m typeness.replay --case <case_id> --stage llm   # single case, LLM only
+uv run python -m typeness.replay --stage llm                     # all cases, LLM only
+uv run python -m typeness.replay --case <case_id> --stage full   # single case, Whisper + LLM
 ```
 
 ## GPU Requirements
